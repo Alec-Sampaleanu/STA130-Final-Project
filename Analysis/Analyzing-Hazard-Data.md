@@ -53,24 +53,6 @@ hazardcan <- hazarddat %>%
 This is a big data frame with over 10000 observations and 23 variables. Are all of these variables useful?
 
 ``` r
-sum(!is.na(hazardcan$Rationale))
-```
-
-    ## [1] 0
-
-``` r
-sum(!is.na(hazardcan$City))
-```
-
-    ## [1] 0
-
-``` r
-sum(hazardcan$County != "")
-```
-
-    ## [1] 0
-
-``` r
 remove <- c("County", "Rationale", "City", "Country", "ISO_3166_2")
 
 hazardcan <- hazardcan %>%
