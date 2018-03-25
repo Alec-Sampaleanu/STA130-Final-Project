@@ -41,3 +41,42 @@ glimpse(hazarddat)
     ## $ UpdateDate      <fctr> 2018-01-02, 2018-01-02, 2018-01-02, 2018-01-0...
     ## $ Version         <int> 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1...
     ## $ City            <lgl> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
+
+This is the hazardous driving dataset in its out-of-the-box form from GeoTab. The first thing to note is that this dataset has observations from outside of Canada. Since the focus of this project is on hazardous driving in Canada, we'll create a new data frame called hazardcan.
+
+``` r
+hazardcan <- hazarddat %>%
+  filter(Country == "Canada")
+```
+
+This is a big data frame with over 10000 observations and 23 variables. Are all of these variables useful?
+
+``` r
+sum(!is.na(hazardcan$Rationale))
+```
+
+    ## [1] 0
+
+``` r
+sum(!is.na(hazardcan$City))
+```
+
+    ## [1] 0
+
+``` r
+sum(hazardcan$County != "")
+```
+
+    ## [1] 0
+
+``` r
+remove <- c("County", "Rationale", "City")
+
+hazardcan <- hazardcan %>%
+  select(-one_of(remove))
+```
+
+County, City, and Rationale are all empty columns, and so are discarded. At this point we have the data frame we'd like to proceed with.
+
+Number of Hazardous Zones
+-------------------------
