@@ -46,7 +46,8 @@ This is the hazardous driving dataset in its out-of-the-box form from GeoTab. Th
 
 ``` r
 hazardcan <- hazarddat %>%
-  filter(Country == "Canada")
+  filter(Country == "Canada") %>%
+  rename(Province = State)
 ```
 
 This is a big data frame with over 10000 observations and 23 variables. Are all of these variables useful?
@@ -70,13 +71,59 @@ sum(hazardcan$County != "")
     ## [1] 0
 
 ``` r
-remove <- c("County", "Rationale", "City")
+remove <- c("County", "Rationale", "City", "Country", "ISO_3166_2")
 
 hazardcan <- hazardcan %>%
   select(-one_of(remove))
 ```
 
-County, City, and Rationale are all empty columns, and so are discarded. At this point we have the data frame we'd like to proceed with.
+County, City, and Rationale are all empty columns, and so are discarded. Country and the ISO designation are not needed either. At this point we have the data frame we'd like to proceed with.
 
-Number of Hazardous Zones
--------------------------
+Number of Incidents
+-------------------
+
+A very basic first step is to simply determine which province has the highest number of incidents within hazardous deiving zones.
+
+``` r
+incidentprov <- hazardcan %>%
+  group_by(Province) %>%
+  summarise(TotalIncidents = sum(NumberIncidents))
+
+incidentprov
+```
+
+    ## # A tibble: 10 x 2
+    ##    Province                  TotalIncidents
+    ##    <fctr>                             <int>
+    ##  1 Alberta                             4968
+    ##  2 British Columbia                    6158
+    ##  3 Manitoba                           15412
+    ##  4 New Brunswick                       4467
+    ##  5 Newfoundland and Labrador            977
+    ##  6 Nova Scotia                         6617
+    ##  7 Ontario                           109283
+    ##  8 Prince Edward Island                  19
+    ##  9 Quebec                             84791
+    ## 10 Saskatchewan                         516
+
+This table shows that Ontario has the highest total number of hazardous driving incidents of any province in Canada. But what about incidents in respect to total population?
+
+``` r
+populationprov <- read.csv("population.csv") %>%
+  select(c(2,4)) %>%
+  slice(c(2:11)) %>%
+  rename(Province = Geographic.name) %>%
+  rename(Population = Population..2016)
+
+incidentprov <- incidentprov %>%
+  inner_join(populationprov, by = "Province") %>%
+  mutate(IncidentsPerCapita = TotalIncidents / Population)
+
+incidentprov$Province <- gsub(" ", "\n", incidentprov$Province)
+
+ggplot(incidentprov, aes(reorder(Province, IncidentsPerCapita), IncidentsPerCapita)) +
+  geom_bar(stat="identity") + labs(x = "Province") + 
+  theme(axis.text.x = element_text(size = 8))
+```
+
+![](Analyzing-Hazard-Data_files/figure-markdown_github/unnamed-chunk-6-1.png)
