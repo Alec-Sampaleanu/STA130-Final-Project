@@ -1,0 +1,22 @@
+---
+title: "Analyzing Hazard Data"
+author: "Alec Sampaleanu"
+date: "March 25, 2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+##Setup
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+hazarddat <- read.csv("hazarddat.csv")
+
+glimpse(hazarddat)
+```
