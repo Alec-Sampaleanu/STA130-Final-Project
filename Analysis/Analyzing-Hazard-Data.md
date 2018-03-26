@@ -133,7 +133,8 @@ Not very useful, unfortunately, so lets focus in on the lower ranges.
 ``` r
 plotcan %>%
   ggplot(aes(reorder(Province, SeverityScore, median), SeverityScore)) + geom_boxplot() +
-  coord_cartesian(ylim = c(0, 2))
+  coord_cartesian(ylim = c(0, 2)) + labs(x = "Province") + 
+  theme(axis.text.x = element_text(size = 8), )
 ```
 
 ![](Analyzing-Hazard-Data_files/figure-markdown_github/unnamed-chunk-8-1.png)
@@ -174,3 +175,24 @@ hazardcan %>%
     ## 1    46
 
 Of the three provinces with the highest median severity scores, none has more than 50 hazardous driving zones. In fact, PEI only has 2!
+
+``` r
+severityprov <- hazardcan %>%
+  group_by(Province) %>%
+  summarise(Areas = n()) %>%
+  inner_join(populationprov, by = "Province") %>%
+  mutate(AreasPerCapita = Areas / Population)
+
+plotseverityprov <- severityprov
+
+plotseverityprov$Province <- gsub(" ", "\n", plotseverityprov$Province)
+
+plotseverityprov %>%
+  ggplot(aes(reorder(Province, AreasPerCapita),AreasPerCapita)) + 
+  geom_bar(stat = "identity") + labs(x = "Province") + 
+  theme(axis.text.x = element_text(size = 8), )
+```
+
+![](Analyzing-Hazard-Data_files/figure-markdown_github/unnamed-chunk-10-1.png)
+
+PEI, Newfoundland, and Saskatchewan's hazardous driving areas have the highest severity scores, but they are also the provinces with the fewest number of hazardous driving areas in proportion to their population.
