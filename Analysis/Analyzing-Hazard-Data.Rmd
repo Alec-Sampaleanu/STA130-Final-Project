@@ -65,9 +65,51 @@ incidentprov <- incidentprov %>%
   inner_join(populationprov, by = "Province") %>%
   mutate(IncidentsPerCapita = TotalIncidents / Population)
 
-incidentprov$Province <- gsub(" ", "\n", incidentprov$Province)
+plotprov <- incidentprov
 
-ggplot(incidentprov, aes(reorder(Province, IncidentsPerCapita), IncidentsPerCapita)) +
+plotprov$Province <- gsub(" ", "\n", plotprov$Province)
+
+ggplot(plotprov, aes(reorder(Province, IncidentsPerCapita), IncidentsPerCapita)) +
   geom_bar(stat="identity") + labs(x = "Province") + 
-  theme(axis.text.x = element_text(size = 8))
+  theme(axis.text.x = element_text(size = 8), )
 ```
+
+Using population statistics taken from the 2016 Census, we can determine each provinces ratio of incidents per capita. In terms of incidents per capita, Manitoba is the most dangerous province, and PEI is the least dangerous. Is the number of incidents really the best way to determine danger, however? Incidents in this data set range from harsh braking to multi-vehicle incidents, so clearly there is a range of severity. That's where the Severity Score comes in.
+
+##Severity Score
+
+```{r}
+plotcan <- hazardcan
+
+plotcan$Province <- gsub(" ", "\n", plotcan$Province)
+
+plotcan %>%
+  ggplot(aes(Province, SeverityScore)) + geom_boxplot()
+```
+
+Not very useful, unfortunately, so lets focus in on the lower ranges.
+
+```{r}
+plotcan %>%
+  ggplot(aes(reorder(Province, SeverityScore, median), SeverityScore)) + geom_boxplot() +
+  coord_cartesian(ylim = c(0, 2))
+```
+
+It seems that Newfoundland has the highest median Severity Score for its hazardous driving areas, while Manitoba has the lowest. This is very interesting, because Manitoba was the province with the highest total number of incidents. 
+
+```{r}
+hazardcan %>%
+  filter(Province == "Newfoundland and Labrador") %>%
+  count()
+
+hazardcan %>%
+  filter(Province == "Prince Edward Island") %>%
+  count()
+
+hazardcan %>%
+  filter(Province == "Saskatchewan") %>%
+  count()
+```
+
+Of the three provinces with the highest median severity scores, none has more than 50 hazardous driving zones. In fact, PEI only has 2!
+
