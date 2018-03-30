@@ -128,7 +128,64 @@ plotseverityprov$Province <- gsub(" ", "\n", plotseverityprov$Province)
 plotseverityprov %>%
   ggplot(aes(reorder(Province, AreasPerCapita),AreasPerCapita)) + 
   geom_bar(stat = "identity") + labs(x = "Province") + 
-  theme(axis.text.x = element_text(size = 8), )
+  theme(axis.text.x = element_text(size = 8))
 ```
 
 PEI, Newfoundland, and Saskatchewan's hazardous driving areas have the highest severity scores, but they are also the provinces with the fewest number of hazardous driving areas in proportion to their population. 
+
+##Hazardous Driving
+
+At this point we need to decide on a definition of hazardous driving. Is it more dangerous to drive in a province with very many low hazard zones, or one with a fewer number of higher severity zones? And for measuring the average severity of a province, should we use median or mean? 
+
+```{r}
+hazardcan %>%
+  group_by(Province) %>%
+  summarise(medianSS = median(SeverityScore)) %>%
+  arrange(-medianSS)
+```
+
+This is a table of the median severity scores,
+
+```{r}
+hazardcan %>%
+  group_by(Province) %>%
+  summarise(meanSS = mean(SeverityScore)) %>%
+  arrange(-meanSS)
+```
+
+These are very different distributions, and the reason why can be seen if we re-examine the distributions of severity for each province.
+
+```{r}
+plotcan <- hazardcan
+
+plotcan$Province <- gsub(" ", "\n", plotcan$Province)
+
+plotcan %>%
+  ggplot(aes(Province, SeverityScore)) + geom_boxplot()
+```
+
+Median is an average that tends to ignore outliers more than mean. In the situation of hazardous driving zones, provinces like Ontario and Quebec have a ridiculous number of zones, most of which are low severity. However, they also have severe zones, unlike PEI, which median does not take into account but mean does. 
+
+Is there a way to rate each province based on both mean severity and number of zones per capita?
+
+##Normalization
+
+We're going to attempt to normalize both areas per capita and mean severity so that they both are measured on a scale of 0 to 1, where 1 is the max value of that variable in our dataset.
+
+```{r}
+hazardcan %>%
+  group_by(Province) %>%
+  summarize(mean_sev = mean(SeverityScore), areas = n()) %>%
+  inner_join(populationprov, by = "Province") %>%
+  mutate(areas_per_cap = areas / Population) %>%
+  mutate(norm_mean_sev = (mean_sev - min(mean_sev)) / 
+                         (max(mean_sev) - min(mean_sev)), 
+         norm_areas_per_cap = (areas_per_cap - min(areas_per_cap)) /
+                              (max(areas_per_cap) - min(areas_per_cap))) %>%
+  mutate(score = ((norm_mean_sev + norm_areas_per_cap) / 2)) %>% 
+  mutate(rank = as.integer(rank(-score))) %>%
+  select(Province, score, rank) %>%
+  arrange(rank)
+```
+
+We then combined the two normalized scales into one value, and then ranked the provinces based on this value.

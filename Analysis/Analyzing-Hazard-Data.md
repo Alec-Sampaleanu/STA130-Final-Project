@@ -190,9 +190,112 @@ plotseverityprov$Province <- gsub(" ", "\n", plotseverityprov$Province)
 plotseverityprov %>%
   ggplot(aes(reorder(Province, AreasPerCapita),AreasPerCapita)) + 
   geom_bar(stat = "identity") + labs(x = "Province") + 
-  theme(axis.text.x = element_text(size = 8), )
+  theme(axis.text.x = element_text(size = 8))
 ```
 
 ![](Analyzing-Hazard-Data_files/figure-markdown_github/unnamed-chunk-10-1.png)
 
 PEI, Newfoundland, and Saskatchewan's hazardous driving areas have the highest severity scores, but they are also the provinces with the fewest number of hazardous driving areas in proportion to their population.
+
+Hazardous Driving
+-----------------
+
+At this point we need to decide on a definition of hazardous driving. Is it more dangerous to drive in a province with very many low hazard zones, or one with a fewer number of higher severity zones? And for measuring the average severity of a province, should we use median or mean?
+
+``` r
+hazardcan %>%
+  group_by(Province) %>%
+  summarise(medianSS = median(SeverityScore)) %>%
+  arrange(-medianSS)
+```
+
+    ## # A tibble: 10 x 2
+    ##    Province                  medianSS
+    ##    <fctr>                       <dbl>
+    ##  1 Newfoundland and Labrador   0.108 
+    ##  2 Prince Edward Island        0.0906
+    ##  3 Saskatchewan                0.0668
+    ##  4 New Brunswick               0.0510
+    ##  5 Quebec                      0.0364
+    ##  6 British Columbia            0.0310
+    ##  7 Alberta                     0.0261
+    ##  8 Nova Scotia                 0.0260
+    ##  9 Ontario                     0.0219
+    ## 10 Manitoba                    0.0216
+
+This is a table of the median severity scores,
+
+``` r
+hazardcan %>%
+  group_by(Province) %>%
+  summarise(meanSS = mean(SeverityScore)) %>%
+  arrange(-meanSS)
+```
+
+    ## # A tibble: 10 x 2
+    ##    Province                  meanSS
+    ##    <fctr>                     <dbl>
+    ##  1 Saskatchewan              0.439 
+    ##  2 Newfoundland and Labrador 0.272 
+    ##  3 New Brunswick             0.130 
+    ##  4 Quebec                    0.115 
+    ##  5 Alberta                   0.109 
+    ##  6 Prince Edward Island      0.0906
+    ##  7 Manitoba                  0.0863
+    ##  8 Ontario                   0.0808
+    ##  9 British Columbia          0.0660
+    ## 10 Nova Scotia               0.0603
+
+These are very different distributions, and the reason why can be seen if we re-examine the distributions of severity for each province.
+
+``` r
+plotcan <- hazardcan
+
+plotcan$Province <- gsub(" ", "\n", plotcan$Province)
+
+plotcan %>%
+  ggplot(aes(Province, SeverityScore)) + geom_boxplot()
+```
+
+![](Analyzing-Hazard-Data_files/figure-markdown_github/unnamed-chunk-13-1.png)
+
+Median is an average that tends to ignore outliers more than mean. In the situation of hazardous driving zones, provinces like Ontario and Quebec have a ridiculous number of zones, most of which are low severity. However, they also have severe zones, unlike PEI, which median does not take into account but mean does.
+
+Is there a way to rate each province based on both mean severity and number of zones per capita?
+
+Normalization
+-------------
+
+We're going to attempt to normalize both areas per capita and mean severity so that they both are measured on a scale of 0 to 1, where 1 is the max value of that variable in our dataset.
+
+``` r
+hazardcan %>%
+  group_by(Province) %>%
+  summarize(mean_sev = mean(SeverityScore), areas = n()) %>%
+  inner_join(populationprov, by = "Province") %>%
+  mutate(areas_per_cap = areas / Population) %>%
+  mutate(norm_mean_sev = (mean_sev - min(mean_sev)) / 
+                         (max(mean_sev) - min(mean_sev)), 
+         norm_areas_per_cap = (areas_per_cap - min(areas_per_cap)) /
+                              (max(areas_per_cap) - min(areas_per_cap))) %>%
+  mutate(score = ((norm_mean_sev + norm_areas_per_cap) / 2)) %>% 
+  mutate(rank = as.integer(rank(-score))) %>%
+  select(Province, score, rank) %>%
+  arrange(rank)
+```
+
+    ## # A tibble: 10 x 3
+    ##    Province                   score  rank
+    ##    <chr>                      <dbl> <int>
+    ##  1 Manitoba                  0.534      1
+    ##  2 Saskatchewan              0.531      2
+    ##  3 Ontario                   0.493      3
+    ##  4 Newfoundland and Labrador 0.368      4
+    ##  5 Quebec                    0.343      5
+    ##  6 Nova Scotia               0.273      6
+    ##  7 New Brunswick             0.253      7
+    ##  8 Alberta                   0.177      8
+    ##  9 British Columbia          0.149      9
+    ## 10 Prince Edward Island      0.0401    10
+
+We then combined the two normalized scales into one value, and then ranked the provinces based on this value.
