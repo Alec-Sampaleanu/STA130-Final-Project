@@ -8,6 +8,7 @@ Setup
 
 ``` r
 library(tidyverse)
+library(ggmap)
 ```
 
 ``` r
@@ -47,7 +48,7 @@ This is the hazardous driving dataset in its out-of-the-box form from GeoTab. Th
 ``` r
 hazardcan <- hazarddat %>%
   filter(Country == "Canada") %>%
-  rename(Province = State)
+  rename(province = State)
 ```
 
 This is a big data frame with over 10000 observations and 23 variables. Are all of these variables useful?
@@ -68,14 +69,14 @@ A very basic first step is to simply determine which province has the highest nu
 
 ``` r
 incidentprov <- hazardcan %>%
-  group_by(Province) %>%
+  group_by(province) %>%
   summarise(TotalIncidents = sum(NumberIncidents))
 
 incidentprov
 ```
 
     ## # A tibble: 10 x 2
-    ##    Province                  TotalIncidents
+    ##    province                  TotalIncidents
     ##    <fctr>                             <int>
     ##  1 Alberta                             4968
     ##  2 British Columbia                    6158
@@ -94,18 +95,18 @@ This table shows that Ontario has the highest total number of hazardous driving 
 populationprov <- read.csv("population.csv") %>%
   select(c(2,4)) %>%
   slice(c(2:11)) %>%
-  rename(Province = Geographic.name) %>%
-  rename(Population = Population..2016)
+  rename(province = Geographic.name) %>%
+  rename(population = Population..2016)
 
 incidentprov <- incidentprov %>%
-  inner_join(populationprov, by = "Province") %>%
-  mutate(IncidentsPerCapita = TotalIncidents / Population)
+  inner_join(populationprov, by = "province") %>%
+  mutate(incidents_per_cap = TotalIncidents / population)
 
 plotprov <- incidentprov
 
-plotprov$Province <- gsub(" ", "\n", plotprov$Province)
+plotprov$province <- gsub(" ", "\n", plotprov$province)
 
-ggplot(plotprov, aes(reorder(Province, IncidentsPerCapita), IncidentsPerCapita)) +
+ggplot(plotprov, aes(reorder(province, incidents_per_cap), incidents_per_cap)) +
   geom_bar(stat="identity") + labs(x = "Province") + 
   theme(axis.text.x = element_text(size = 8), )
 ```
@@ -120,10 +121,10 @@ Severity Score
 ``` r
 plotcan <- hazardcan
 
-plotcan$Province <- gsub(" ", "\n", plotcan$Province)
+plotcan$province <- gsub(" ", "\n", plotcan$province)
 
 plotcan %>%
-  ggplot(aes(Province, SeverityScore)) + geom_boxplot()
+  ggplot(aes(province, SeverityScore)) + geom_boxplot()
 ```
 
 ![](Analyzing-Hazard-Data_files/figure-markdown_github/unnamed-chunk-7-1.png)
@@ -132,7 +133,7 @@ Not very useful, unfortunately, so lets focus in on the lower ranges.
 
 ``` r
 plotcan %>%
-  ggplot(aes(reorder(Province, SeverityScore, median), SeverityScore)) + geom_boxplot() +
+  ggplot(aes(reorder(province, SeverityScore, median), SeverityScore)) + geom_boxplot() +
   coord_cartesian(ylim = c(0, 2)) + labs(x = "Province") + 
   theme(axis.text.x = element_text(size = 8), )
 ```
@@ -143,7 +144,7 @@ It seems that Newfoundland has the highest median Severity Score for its hazardo
 
 ``` r
 hazardcan %>%
-  filter(Province == "Newfoundland and Labrador") %>%
+  filter(province == "Newfoundland and Labrador") %>%
   count()
 ```
 
@@ -154,7 +155,7 @@ hazardcan %>%
 
 ``` r
 hazardcan %>%
-  filter(Province == "Prince Edward Island") %>%
+  filter(province == "Prince Edward Island") %>%
   count()
 ```
 
@@ -165,7 +166,7 @@ hazardcan %>%
 
 ``` r
 hazardcan %>%
-  filter(Province == "Saskatchewan") %>%
+  filter(province == "Saskatchewan") %>%
   count()
 ```
 
@@ -178,17 +179,17 @@ Of the three provinces with the highest median severity scores, none has more th
 
 ``` r
 severityprov <- hazardcan %>%
-  group_by(Province) %>%
-  summarise(Areas = n()) %>%
-  inner_join(populationprov, by = "Province") %>%
-  mutate(AreasPerCapita = Areas / Population)
+  group_by(province) %>%
+  summarise(areas = n()) %>%
+  inner_join(populationprov, by = "province") %>%
+  mutate(areas_per_cap = areas / population)
 
 plotseverityprov <- severityprov
 
-plotseverityprov$Province <- gsub(" ", "\n", plotseverityprov$Province)
+plotseverityprov$province <- gsub(" ", "\n", plotseverityprov$province)
 
 plotseverityprov %>%
-  ggplot(aes(reorder(Province, AreasPerCapita),AreasPerCapita)) + 
+  ggplot(aes(reorder(province, areas_per_cap), areas_per_cap)) + 
   geom_bar(stat = "identity") + labs(x = "Province") + 
   theme(axis.text.x = element_text(size = 8))
 ```
@@ -204,57 +205,57 @@ At this point we need to decide on a definition of hazardous driving. Is it more
 
 ``` r
 hazardcan %>%
-  group_by(Province) %>%
-  summarise(medianSS = median(SeverityScore)) %>%
-  arrange(-medianSS)
+  group_by(province) %>%
+  summarise(median_sev = median(SeverityScore)) %>%
+  arrange(-median_sev)
 ```
 
     ## # A tibble: 10 x 2
-    ##    Province                  medianSS
-    ##    <fctr>                       <dbl>
-    ##  1 Newfoundland and Labrador   0.108 
-    ##  2 Prince Edward Island        0.0906
-    ##  3 Saskatchewan                0.0668
-    ##  4 New Brunswick               0.0510
-    ##  5 Quebec                      0.0364
-    ##  6 British Columbia            0.0310
-    ##  7 Alberta                     0.0261
-    ##  8 Nova Scotia                 0.0260
-    ##  9 Ontario                     0.0219
-    ## 10 Manitoba                    0.0216
+    ##    province                  median_sev
+    ##    <fctr>                         <dbl>
+    ##  1 Newfoundland and Labrador     0.108 
+    ##  2 Prince Edward Island          0.0906
+    ##  3 Saskatchewan                  0.0668
+    ##  4 New Brunswick                 0.0510
+    ##  5 Quebec                        0.0364
+    ##  6 British Columbia              0.0310
+    ##  7 Alberta                       0.0261
+    ##  8 Nova Scotia                   0.0260
+    ##  9 Ontario                       0.0219
+    ## 10 Manitoba                      0.0216
 
 This is a table of the median severity scores,
 
 ``` r
 hazardcan %>%
-  group_by(Province) %>%
-  summarise(meanSS = mean(SeverityScore)) %>%
-  arrange(-meanSS)
+  group_by(province) %>%
+  summarise(mean_sev = mean(SeverityScore)) %>%
+  arrange(-mean_sev)
 ```
 
     ## # A tibble: 10 x 2
-    ##    Province                  meanSS
-    ##    <fctr>                     <dbl>
-    ##  1 Saskatchewan              0.439 
-    ##  2 Newfoundland and Labrador 0.272 
-    ##  3 New Brunswick             0.130 
-    ##  4 Quebec                    0.115 
-    ##  5 Alberta                   0.109 
-    ##  6 Prince Edward Island      0.0906
-    ##  7 Manitoba                  0.0863
-    ##  8 Ontario                   0.0808
-    ##  9 British Columbia          0.0660
-    ## 10 Nova Scotia               0.0603
+    ##    province                  mean_sev
+    ##    <fctr>                       <dbl>
+    ##  1 Saskatchewan                0.439 
+    ##  2 Newfoundland and Labrador   0.272 
+    ##  3 New Brunswick               0.130 
+    ##  4 Quebec                      0.115 
+    ##  5 Alberta                     0.109 
+    ##  6 Prince Edward Island        0.0906
+    ##  7 Manitoba                    0.0863
+    ##  8 Ontario                     0.0808
+    ##  9 British Columbia            0.0660
+    ## 10 Nova Scotia                 0.0603
 
 These are very different distributions, and the reason why can be seen if we re-examine the distributions of severity for each province.
 
 ``` r
 plotcan <- hazardcan
 
-plotcan$Province <- gsub(" ", "\n", plotcan$Province)
+plotcan$province <- gsub(" ", "\n", plotcan$province)
 
 plotcan %>%
-  ggplot(aes(Province, SeverityScore)) + geom_boxplot()
+  ggplot(aes(province, SeverityScore)) + geom_boxplot()
 ```
 
 ![](Analyzing-Hazard-Data_files/figure-markdown_github/unnamed-chunk-13-1.png)
@@ -270,22 +271,22 @@ We're going to attempt to normalize both areas per capita and mean severity so t
 
 ``` r
 hazardcan %>%
-  group_by(Province) %>%
+  group_by(province) %>%
   summarize(mean_sev = mean(SeverityScore), areas = n()) %>%
-  inner_join(populationprov, by = "Province") %>%
-  mutate(areas_per_cap = areas / Population) %>%
+  inner_join(populationprov, by = "province") %>%
+  mutate(areas_per_cap = areas / population) %>%
   mutate(norm_mean_sev = (mean_sev - min(mean_sev)) / 
                          (max(mean_sev) - min(mean_sev)), 
          norm_areas_per_cap = (areas_per_cap - min(areas_per_cap)) /
                               (max(areas_per_cap) - min(areas_per_cap))) %>%
   mutate(score = ((norm_mean_sev + norm_areas_per_cap) / 2)) %>% 
   mutate(rank = as.integer(rank(-score))) %>%
-  select(Province, score, rank) %>%
+  select(province, score, rank) %>%
   arrange(rank)
 ```
 
     ## # A tibble: 10 x 3
-    ##    Province                   score  rank
+    ##    province                   score  rank
     ##    <chr>                      <dbl> <int>
     ##  1 Manitoba                  0.534      1
     ##  2 Saskatchewan              0.531      2
@@ -298,4 +299,51 @@ hazardcan %>%
     ##  9 British Columbia          0.149      9
     ## 10 Prince Edward Island      0.0401    10
 
-We then combined the two normalized scales into one value, and then ranked the provinces based on this value.
+We then combined the two normalized scales into one value, and then ranked the provinces based on this value. Using this ranking, we determine that Manitoba is the most dangerous province to drive in, closely followed by Saskatchewan. PEI is the safest province, by a large margin.
+
+Adding more data
+----------------
+
+This ranking is good as is, but we would like to know if adding other data can improve these rankings. The issue with the Geotab data is that it comes only from vehicles that are in their network of sensors. Most of their network is composed of trucks, with cars making up a small portion of the fleet. This can lead to areas with heavy trucking being overrated in terms of hazard, while areas with low trucking may be underrated. As well, the Severity Score calculated by Geotab does not take into account the number of victims of each incident.
+
+``` r
+province_fat <- data_frame(
+  province = c("Newfoundland and Labrador", "Prince Edward Island", "Nova Scotia", 
+               "New Brunswick","Quebec", "Ontario", "Manitoba", "Saskatchewan", 
+               "Alberta", "British Columbia"),
+  fat_per_bvk = c(8.2, 12.3, 4.8, 6.0, 4.9, 3.7, 5.5, 8.7, 5.5, 7.7)
+)
+
+hazardcan %>%
+  group_by(province) %>%
+  summarize(mean_sev = mean(SeverityScore), areas = n()) %>%
+  inner_join(populationprov, by = "province") %>%
+  mutate(areas_per_cap = areas / population) %>%
+  inner_join(province_fat, by = "province") %>%
+  mutate(norm_mean_sev = (mean_sev - min(mean_sev)) / 
+                         (max(mean_sev) - min(mean_sev)), 
+         norm_areas_per_cap = (areas_per_cap - min(areas_per_cap)) /
+                              (max(areas_per_cap) - min(areas_per_cap)),
+         norm_fat_per_bvk = (fat_per_bvk - min(fat_per_bvk)) /
+                            (max(fat_per_bvk) - min(fat_per_bvk))) %>%
+  mutate(score = ((norm_mean_sev + norm_areas_per_cap + norm_fat_per_bvk) / 3)) %>% 
+  mutate(rank = as.integer(rank(-score))) %>%
+  select(province, score, rank) %>%
+  arrange(rank)
+```
+
+    ## # A tibble: 10 x 3
+    ##    province                  score  rank
+    ##    <chr>                     <dbl> <int>
+    ##  1 Saskatchewan              0.548     1
+    ##  2 Manitoba                  0.426     2
+    ##  3 Newfoundland and Labrador 0.420     3
+    ##  4 Prince Edward Island      0.360     4
+    ##  5 Ontario                   0.329     5
+    ##  6 Quebec                    0.275     6
+    ##  7 New Brunswick             0.258     7
+    ##  8 British Columbia          0.255     8
+    ##  9 Nova Scotia               0.225     9
+    ## 10 Alberta                   0.188    10
+
+This updated ranking takes into account the Canadian Motor Vehicle Traffic Collision Statistics for 2015 collected by the Government of Canada, specifically the data that tracks traffic fatalities per billion vehicle-kilometres. What we see immediately is that PEI jumps up from the bottom to 4th most dangerous province. PEI has by far the most fatalities per billion vehicle-kilometres, meaning that it's ridiculously low-score in the old ranking is not indicative of the realities of driving in the province.
