@@ -347,3 +347,17 @@ hazardcan %>%
     ## 10 Alberta                   0.188    10
 
 This updated ranking takes into account the Canadian Motor Vehicle Traffic Collision Statistics for 2015 collected by the Government of Canada, specifically the data that tracks traffic fatalities per billion vehicle-kilometres. What we see immediately is that PEI jumps up from the bottom to 4th most dangerous province. PEI has by far the most fatalities per billion vehicle-kilometres, meaning that it's ridiculously low-score in the old ranking is not indicative of the realities of driving in the province.
+
+Visualization
+-------------
+
+``` r
+hazardcan2 <- hazardcan %>%
+  rename(lat = AvgLatitude, lon = AvgLongitude)
+
+qmplot(lon, lat, data = hazardcan2, maptype = "toner-lite", colour = SeverityScore,
+       alpha = SeverityScore) +
+  scale_colour_gradient(low = "green", high = "red")
+```
+
+![](Analyzing-Hazard-Data_files/figure-markdown_github/unnamed-chunk-16-1.png)
