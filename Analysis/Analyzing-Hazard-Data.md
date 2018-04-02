@@ -9,6 +9,7 @@ Setup
 ``` r
 library(tidyverse)
 library(ggmap)
+library(modelr)
 ```
 
 ``` r
@@ -314,7 +315,7 @@ province_fat <- data_frame(
   fat_per_bvk = c(8.2, 12.3, 4.8, 6.0, 4.9, 3.7, 5.5, 8.7, 5.5, 7.7)
 )
 
-hazardcan %>%
+provrank <- hazardcan %>%
   group_by(province) %>%
   summarize(mean_sev = mean(SeverityScore), areas = n()) %>%
   inner_join(populationprov, by = "province") %>%
@@ -327,37 +328,68 @@ hazardcan %>%
          norm_fat_per_bvk = (fat_per_bvk - min(fat_per_bvk)) /
                             (max(fat_per_bvk) - min(fat_per_bvk))) %>%
   mutate(score = ((norm_mean_sev + norm_areas_per_cap + norm_fat_per_bvk) / 3)) %>% 
-  mutate(rank = as.integer(rank(-score))) %>%
+  mutate(rank = as.factor(rank(-score))) %>%
+  select(province, score, rank) %>%
+  arrange(rank)
+
+provrank
+```
+
+    ## # A tibble: 10 x 3
+    ##    province                  score rank  
+    ##    <chr>                     <dbl> <fctr>
+    ##  1 Saskatchewan              0.548 1     
+    ##  2 Manitoba                  0.426 2     
+    ##  3 Newfoundland and Labrador 0.420 3     
+    ##  4 Prince Edward Island      0.360 4     
+    ##  5 Ontario                   0.329 5     
+    ##  6 Quebec                    0.275 6     
+    ##  7 New Brunswick             0.258 7     
+    ##  8 British Columbia          0.255 8     
+    ##  9 Nova Scotia               0.225 9     
+    ## 10 Alberta                   0.188 10
+
+This updated ranking takes into account the Canadian Motor Vehicle Traffic Collision Statistics for 2015 collected by the Government of Canada, specifically the data that tracks traffic fatalities per billion vehicle-kilometres. What we see immediately is that PEI jumps up from the bottom to 4th most dangerous province. PEI has by far the most fatalities per billion vehicle-kilometres, meaning that it's ridiculously low-score in the old ranking is not indicative of the realities of driving in the province.
+
+How many roads?
+---------------
+
+``` r
+roadprov <- data_frame(
+  province = c("Newfoundland and Labrador", "Prince Edward Island", "Nova Scotia", 
+               "New Brunswick","Quebec", "Ontario", "Manitoba", "Saskatchewan", 
+               "Alberta", "British Columbia"),
+  tkm_road = c(19.3, 6.0, 27.1, 31.5, 144.7, 191.0, 86.6, 228.2, 226.3, 71.1)
+)
+
+hazardcan %>%
+  group_by(province) %>%
+  summarize(mean_sev = mean(SeverityScore), areas = n()) %>%
+  inner_join(roadprov, by = "province") %>%
+  mutate(areas_per_tkm_road = areas / tkm_road) %>%
+  inner_join(province_fat, by = "province") %>%
+  mutate(norm_mean_sev = (mean_sev - min(mean_sev)) / 
+                         (max(mean_sev) - min(mean_sev)), 
+         norm_areas_per_tkm_road = (areas_per_tkm_road - min(areas_per_tkm_road)) /
+                              (max(areas_per_tkm_road) - min(areas_per_tkm_road)),
+         norm_fat_per_bvk = (fat_per_bvk - min(fat_per_bvk)) /
+                            (max(fat_per_bvk) - min(fat_per_bvk))) %>%
+  mutate(score = ((norm_mean_sev + norm_areas_per_tkm_road + norm_fat_per_bvk) / 3)) %>% 
+  mutate(rank = as.factor(rank(-score))) %>%
   select(province, score, rank) %>%
   arrange(rank)
 ```
 
     ## # A tibble: 10 x 3
-    ##    province                  score  rank
-    ##    <chr>                     <dbl> <int>
-    ##  1 Saskatchewan              0.548     1
-    ##  2 Manitoba                  0.426     2
-    ##  3 Newfoundland and Labrador 0.420     3
-    ##  4 Prince Edward Island      0.360     4
-    ##  5 Ontario                   0.329     5
-    ##  6 Quebec                    0.275     6
-    ##  7 New Brunswick             0.258     7
-    ##  8 British Columbia          0.255     8
-    ##  9 Nova Scotia               0.225     9
-    ## 10 Alberta                   0.188    10
-
-This updated ranking takes into account the Canadian Motor Vehicle Traffic Collision Statistics for 2015 collected by the Government of Canada, specifically the data that tracks traffic fatalities per billion vehicle-kilometres. What we see immediately is that PEI jumps up from the bottom to 4th most dangerous province. PEI has by far the most fatalities per billion vehicle-kilometres, meaning that it's ridiculously low-score in the old ranking is not indicative of the realities of driving in the province.
-
-Visualization
--------------
-
-``` r
-hazardcan2 <- hazardcan %>%
-  rename(lat = AvgLatitude, lon = AvgLongitude)
-
-qmplot(lon, lat, data = hazardcan2, maptype = "toner-lite", colour = SeverityScore,
-       alpha = SeverityScore) +
-  scale_colour_gradient(low = "green", high = "red")
-```
-
-![](Analyzing-Hazard-Data_files/figure-markdown_github/unnamed-chunk-16-1.png)
+    ##    province                  score rank  
+    ##    <chr>                     <dbl> <fctr>
+    ##  1 Saskatchewan              0.527 1     
+    ##  2 Newfoundland and Labrador 0.386 2     
+    ##  3 Prince Edward Island      0.361 3     
+    ##  4 Ontario                   0.351 4     
+    ##  5 British Columbia          0.259 5     
+    ##  6 Quebec                    0.252 6     
+    ##  7 New Brunswick             0.190 7     
+    ##  8 Manitoba                  0.166 8     
+    ##  9 Nova Scotia               0.138 9     
+    ## 10 Alberta                   0.133 10
