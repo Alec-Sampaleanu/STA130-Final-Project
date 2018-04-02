@@ -393,3 +393,41 @@ hazardcan %>%
     ##  8 Manitoba                  0.166 8     
     ##  9 Nova Scotia               0.138 9     
     ## 10 Alberta                   0.133 10
+
+``` r
+hazardcan %>%
+  group_by(province) %>%
+  summarize(mean_sev = mean(SeverityScore), areas = n()) %>%
+  inner_join(populationprov, by = "province") %>%
+  mutate(areas_per_cap = areas / population) %>%
+  inner_join(roadprov, by = "province") %>%
+  mutate(areas_per_tkm_road = areas / tkm_road) %>%
+  inner_join(province_fat, by = "province") %>%
+  mutate(norm_mean_sev = (mean_sev - min(mean_sev)) / 
+                         (max(mean_sev) - min(mean_sev)), 
+         norm_areas_per_tkm_road = (areas_per_tkm_road - min(areas_per_tkm_road)) /
+                              (max(areas_per_tkm_road) - min(areas_per_tkm_road)),
+         norm_areas_per_cap = (areas_per_cap - min(areas_per_cap)) /
+                              (max(areas_per_cap) - min(areas_per_cap)),
+         norm_fat_per_bvk = (fat_per_bvk - min(fat_per_bvk)) /
+                            (max(fat_per_bvk) - min(fat_per_bvk))) %>%
+  mutate(score = ((norm_mean_sev + 0.5*norm_areas_per_tkm_road + 
+                   0.5*norm_areas_per_cap + norm_fat_per_bvk) / 3)) %>% 
+  mutate(rank = as.factor(rank(-score))) %>%
+  select(province, score, rank) %>%
+  arrange(rank)
+```
+
+    ## # A tibble: 10 x 3
+    ##    province                  score rank  
+    ##    <chr>                     <dbl> <fctr>
+    ##  1 Saskatchewan              0.537 1     
+    ##  2 Newfoundland and Labrador 0.403 2     
+    ##  3 Prince Edward Island      0.361 3     
+    ##  4 Ontario                   0.340 4     
+    ##  5 Manitoba                  0.296 5     
+    ##  6 Quebec                    0.264 6     
+    ##  7 British Columbia          0.257 7     
+    ##  8 New Brunswick             0.224 8     
+    ##  9 Nova Scotia               0.181 9     
+    ## 10 Alberta                   0.160 10
