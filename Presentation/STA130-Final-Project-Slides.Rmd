@@ -1,11 +1,11 @@
 ---
 title: "STA130 Final Project"
-author: "Alec Sampaleanu, Gaoyi Zhou, TUT0101E4"
+author: "Alec Sampaleanu and Gaoyi Zhou, TUT0101E4"
 subtitle: "Determining the Most Dangerous Province to Drive In"
 output:
-  ioslides_presentation: default
   beamer_presentation: default
-widescreen: yes
+  ioslides_presentation: 
+    widescreen: true
 ---
 
 ```{r setup, include=FALSE}
@@ -33,36 +33,23 @@ Our main objective is to define hazardous driving and determine a way to measure
 2. According to your definition of hazardous driving, which province has the most driving hazards?
 3. How does hazardous driving in the province you identified in 2. compare to each of the other provinces?
 
-We decided to define hazardous driving using three descriptors:
-
-1. Mean Severity Score per Province
-2. Number of Areas per 1000 km of Road/Number of Areas per Capita
-3. Number of Fatalities per billion Vehicle-Kilometres
-
-To reach these descriptors requires us to look at a secondary objective, which was to see how different variables affect the position of the provinces in the ranking.
+Our secondary objective was to see which variables were most useful in creating a ranking system for the provinces.
 
 The final objective was to attempt to utilize as much of this semester's curriculum without overanalyzing the data.
 
  
-## Data Summary 
+## Data Summary
 
-The first step was to import and clean the data.
-
-Before cleaning:
+The first step was to import and clean the data. We removed several columns that did not provide relevent data or were empty, such as rationale, and filtered the dataset to only include observations within Canada.
 
 ```{r}
 hazarddat <- read.csv("hazarddat.csv")
 
-glimpse(hazarddat)
-```
-
-After cleaning:
-```{r}
 hazardcan <- hazarddat %>%
   filter(Country == "Canada") %>%
   rename(province = State)
 
-remove <- c("County", "Rationale", "City", "Country", "ISO_3166_2")
+remove <- c("County", "Rationale", "City", "Country", "ISO_3166_2", "X", "Version", "UpdateDate")
 
 hazardcan <- hazardcan %>%
   select(-one_of(remove))
@@ -96,6 +83,8 @@ ggplot(plotprov, aes(reorder(province, incidents_per_cap), incidents_per_cap)) +
   theme(axis.text.x = element_text(size = 8))
 ```
 
+We decided not to use incidents in our ranking because they are already taken into account by the severity score.
+
 ##Severity Scores
 
 ```{r}
@@ -107,6 +96,10 @@ plotcan %>%
   ggplot(aes(province, SeverityScore)) + geom_boxplot()
 ```
 
+When ranking provinces on this score, we chose to use the mean instead of median, since we wished to account for outliers.
+
+##Mean Severity Score
+
 ```{r}
 hazardcan %>%
   group_by(province) %>%
@@ -114,7 +107,9 @@ hazardcan %>%
   arrange(-mean_sev)
 ```
 
-##Areas per Capita vs. Thousand km of Road
+Saskatchewan has by far the highest mean severity score, which will certainly have a negative effect on its ranking.
+
+##Areas per Capita
 
 ```{r}
 hazardcan %>%
@@ -125,6 +120,10 @@ hazardcan %>%
   select(one_of(c("province", "areas_per_cap"))) %>%
   arrange(-areas_per_cap)
 ```
+
+Here we ranked the provinces by hazardous areas per capita. Manitoba and Ontario are the clear leaders in this category.
+
+##Areas per 1000 km of Road
 
 ```{r}
 roadprov <- data_frame(
@@ -142,6 +141,8 @@ hazardcan %>%
   select(one_of(c("province", "areas_per_tkm_road"))) %>%
   arrange(-areas_per_tkm_road)
 ```
+
+This is an alternative way to measure the percentage of areas in a province. By using areas per 100 km of road, we have a better estimate for low-populated provinces with many roads.
 
 ##Fatalities per Billion Vehicle-Kilometres
 
@@ -161,6 +162,8 @@ hazardcan %>%
   arrange(-fat_per_bvk)
 ```
 
+This is a very important statistic to measure since it is the only one that directly tracks the human impact of hazardous driving. PEI is the most dangerous, followed by Saskatchewan.
+
 ## Statistical Methods 
 
 The key to our ranking methodology was that we wanted to ensure that no variable was more important than the other. We felt that by placing equal importance on each variable, we would ensure that our ranking was as fair as possible.
@@ -171,6 +174,8 @@ $$
 X' = \frac{X - X_\mathrm{min}}{X_\mathrm{max} - X_\mathrm{min}}
 $$
 Where $X$ is the variable to be scaled, and $X'$ is the scaled variable.
+
+##Statistical Methods Continued
 
 Since we wanted to include both the number of areas per capita and the number of areas per thousand km of road, we decided to weigh each variable by 0.5. As such, the formula for each provinces score is:
 
@@ -210,6 +215,10 @@ provrank <- hazardcan %>%
 provrank
 ```
 
+Saskatchewan is the most dangerous province, while Alberta is the least dangerous.
+
+##Results Continued
+
 ```{r}
 plotprov <- provrank
 
@@ -222,20 +231,27 @@ plotprov %>%
 
 ## Conclusion 
 
-In conclusion, Saskatchewan is the most dangerous province to drive in. 
+In conclusion, we have answered the three questions in the following ways:
+
+1. Provincial driving hazard is measured using three components: the mean severity of the hazardous areas within the province, the number of driving fatalities per billion vehicle-kilometres in the province, and the average of the number of areas per capita in the province and areas per 1000 km of road in the province.
+
+2. The most dangerous province is Saskatchewan.
+
+3. Th least dangerous province is Alberta, and Nova Scotia, the province highlighted in the assignment, is second safest. Ontario is 4th, and very close behind 3rd place PEI.
 
 
 
-## Acknowledgements (optional) 
+## Acknowledgements 
 
- 
+*The authors thank Wei for providing information on additional data resources. The authors would like to thank Jiayue for his helpful suggestions and comments that helped with teh creation of this project* 
 
-If you received any help from someone other than your team members you can acknowledge them. For example:    
+References:
 
-  *The authors thank Wei for providing information on additional data resources. The authors would like to thank "TA name" for helpful suggestions and comments that improved the presentation of this poster.* 
+Canada. Statistics Canada. (2017). *Population and Dwelling Count Highlight Tables, 2016 Census: Population and dwelling counts, for Canada, provinces and territories*. 
 
+Canada. Transport Canada. (2010). *Road Transportation: Length of Public Road Network in Canada*.
    
-
+Canada. Transport Canada. (2016). *Canadian Motor Vehicle Traffic Collision Statistics: 2015*.
    
 
    
