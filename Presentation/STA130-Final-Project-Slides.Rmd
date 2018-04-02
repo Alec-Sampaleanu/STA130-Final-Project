@@ -3,9 +3,9 @@ title: "STA130 Final Project"
 author: "Alec Sampaleanu and Gaoyi Zhou, TUT0101E4"
 subtitle: "Determining the Most Dangerous Province to Drive In"
 output:
-  beamer_presentation: default
   ioslides_presentation: 
     widescreen: true
+  beamer_presentation: default
 ---
 
 ```{r setup, include=FALSE}
