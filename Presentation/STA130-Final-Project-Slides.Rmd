@@ -1,0 +1,244 @@
+---
+title: "STA130 Final Project"
+author: "Alec Sampaleanu, Gaoyi Zhou, TUT0101E4"
+subtitle: "Determining the Most Dangerous Province to Drive In"
+output:
+  ioslides_presentation: default
+  beamer_presentation: default
+widescreen: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+```
+
+## Introduction 
+
+In 2015, Canadian roads were the site of over 116 000 collisions that lead to personal injuries. Almost 2000 people died in traffic accidents. The question that inevitably arises is: "which province is the most dangerous to drive in?"
+
+Using the Geotab hazardous driving data set, we set out to find the most hazardous province in Canada. Geotab has telemetry sensors in hundreds of thousands of cars accross Canada, which allows them to track these following variables for individual $150 m^2$ areas, as well as others:
+
+- Number of traffic incidents; separated into incidents involving cars, multi-person vehicles, and small, medium, and large trucks
+- Province
+- Severity Score, a score for the area that reflects the traffic flow, incidents, and general hazard of the area
+
+
+## Objectives
+
+Our main objective is to define hazardous driving and determine a way to measure and rank it for all provinces, and so therefore to answer three questions:
+
+1. Define what your group considers to be “hazardous driving” for the purposes of your project. Note that we expect that each group may have a different definition. The analysis your group does will follow from how you choose to define hazardous driving.
+2. According to your definition of hazardous driving, which province has the most driving hazards?
+3. How does hazardous driving in the province you identified in 2. compare to each of the other provinces?
+
+We decided to define hazardous driving using three descriptors:
+
+1. Mean Severity Score per Province
+2. Number of Areas per 1000 km of Road/Number of Areas per Capita
+3. Number of Fatalities per billion Vehicle-Kilometres
+
+To reach these descriptors requires us to look at a secondary objective, which was to see how different variables affect the position of the provinces in the ranking.
+
+The final objective was to attempt to utilize as much of this semester's curriculum without overanalyzing the data.
+
+ 
+## Data Summary 
+
+The first step was to import and clean the data.
+
+Before cleaning:
+
+```{r}
+hazarddat <- read.csv("hazarddat.csv")
+
+glimpse(hazarddat)
+```
+
+After cleaning:
+```{r}
+hazardcan <- hazarddat %>%
+  filter(Country == "Canada") %>%
+  rename(province = State)
+
+remove <- c("County", "Rationale", "City", "Country", "ISO_3166_2")
+
+hazardcan <- hazardcan %>%
+  select(-one_of(remove))
+
+glimpse(hazardcan)
+```
+
+##Exploratory Analysis
+
+```{r}
+incidentprov <- hazardcan %>%
+  group_by(province) %>%
+  summarise(TotalIncidents = sum(NumberIncidents))
+
+populationprov <- read.csv("population.csv") %>%
+  select(c(2,4)) %>%
+  slice(c(2:11)) %>%
+  rename(province = Geographic.name) %>%
+  rename(population = Population..2016)
+
+incidentprov <- incidentprov %>%
+  inner_join(populationprov, by = "province") %>%
+  mutate(incidents_per_cap = TotalIncidents / population)
+
+plotprov <- incidentprov
+
+plotprov$province <- gsub(" ", "\n", plotprov$province)
+
+ggplot(plotprov, aes(reorder(province, incidents_per_cap), incidents_per_cap)) +
+  geom_bar(stat="identity") + labs(x = "Province") + 
+  theme(axis.text.x = element_text(size = 8))
+```
+
+##Severity Scores
+
+```{r}
+plotcan <- hazardcan
+
+plotcan$province <- gsub(" ", "\n", plotcan$province)
+
+plotcan %>%
+  ggplot(aes(province, SeverityScore)) + geom_boxplot()
+```
+
+```{r}
+hazardcan %>%
+  group_by(province) %>%
+  summarise(mean_sev = mean(SeverityScore)) %>%
+  arrange(-mean_sev)
+```
+
+##Areas per Capita vs. Thousand km of Road
+
+```{r}
+hazardcan %>%
+  group_by(province) %>%
+  summarise(areas = n()) %>%
+  inner_join(populationprov, by = "province") %>%
+  mutate(areas_per_cap = areas / population) %>%
+  select(one_of(c("province", "areas_per_cap"))) %>%
+  arrange(-areas_per_cap)
+```
+
+```{r}
+roadprov <- data_frame(
+  province = c("Newfoundland and Labrador", "Prince Edward Island", "Nova Scotia", 
+               "New Brunswick","Quebec", "Ontario", "Manitoba", "Saskatchewan", 
+               "Alberta", "British Columbia"),
+  tkm_road = c(19.3, 6.0, 27.1, 31.5, 144.7, 191.0, 86.6, 228.2, 226.3, 71.1)
+)
+
+hazardcan %>%
+  group_by(province) %>%
+  summarise(areas = n()) %>%
+  inner_join(roadprov, by = "province") %>%
+  mutate(areas_per_tkm_road = areas / tkm_road) %>%
+  select(one_of(c("province", "areas_per_tkm_road"))) %>%
+  arrange(-areas_per_tkm_road)
+```
+
+##Fatalities per Billion Vehicle-Kilometres
+
+```{r}
+province_fat <- data_frame(
+  province = c("Newfoundland and Labrador", "Prince Edward Island", "Nova Scotia", 
+               "New Brunswick","Quebec", "Ontario", "Manitoba", "Saskatchewan", 
+               "Alberta", "British Columbia"),
+  fat_per_bvk = c(8.2, 12.3, 4.8, 6.0, 4.9, 3.7, 5.5, 8.7, 5.5, 7.7)
+)
+
+hazardcan %>%
+  group_by(province) %>%
+  summarise() %>%
+  inner_join(province_fat, by = "province") %>%
+  select(one_of(c("province", "fat_per_bvk"))) %>%
+  arrange(-fat_per_bvk)
+```
+
+## Statistical Methods 
+
+The key to our ranking methodology was that we wanted to ensure that no variable was more important than the other. We felt that by placing equal importance on each variable, we would ensure that our ranking was as fair as possible.
+
+As such, the key statistical method we used is feature scaling. Feature scaling is used to bring all values of a set of numbers into the range [0, 1). The formula for feature scaling is:
+
+$$
+X' = \frac{X - X_\mathrm{min}}{X_\mathrm{max} - X_\mathrm{min}}
+$$
+Where $X$ is the variable to be scaled, and $X'$ is the scaled variable.
+
+Since we wanted to include both the number of areas per capita and the number of areas per thousand km of road, we decided to weigh each variable by 0.5. As such, the formula for each provinces score is:
+
+$$
+S = \frac{\mathrm{NMS} + 
+          \mathrm{NF} +
+          0.5 * \mathrm{NAC} +
+          0.5 * \mathrm{NAR}}{3}
+$$
+Where $NMS$ is normalized mean severity score, $NF$ is normallized fatalities per billion vehicle-kilometres, $NAC$ is normalized areas per capita, and $NAR$ is normalized areas per 1000 km of road.
+
+## Results 
+
+```{r}
+provrank <- hazardcan %>%
+  group_by(province) %>%
+  summarize(mean_sev = mean(SeverityScore), areas = n()) %>%
+  inner_join(populationprov, by = "province") %>%
+  mutate(areas_per_cap = areas / population) %>%
+  inner_join(roadprov, by = "province") %>%
+  mutate(areas_per_tkm_road = areas / tkm_road) %>%
+  inner_join(province_fat, by = "province") %>%
+  mutate(norm_mean_sev = (mean_sev - min(mean_sev)) / 
+                         (max(mean_sev) - min(mean_sev)), 
+         norm_areas_per_tkm_road = (areas_per_tkm_road - min(areas_per_tkm_road)) /
+                              (max(areas_per_tkm_road) - min(areas_per_tkm_road)),
+         norm_areas_per_cap = (areas_per_cap - min(areas_per_cap)) /
+                              (max(areas_per_cap) - min(areas_per_cap)),
+         norm_fat_per_bvk = (fat_per_bvk - min(fat_per_bvk)) /
+                            (max(fat_per_bvk) - min(fat_per_bvk))) %>%
+  mutate(score = ((norm_mean_sev + 0.5*norm_areas_per_tkm_road + 
+                   0.5*norm_areas_per_cap + norm_fat_per_bvk) / 3)) %>% 
+  mutate(rank = as.factor(rank(-score))) %>%
+  select(province, score, rank) %>%
+  arrange(rank)
+
+provrank
+```
+
+```{r}
+plotprov <- provrank
+
+plotprov$province <- gsub(" ", "\n", plotprov$province)
+
+plotprov %>%
+  ggplot(aes(reorder(province, score), score)) + geom_bar(stat = "identity") +
+  labs(x = "Province") + theme(axis.text.x = element_text(size = 8))
+```
+
+## Conclusion 
+
+In conclusion, Saskatchewan is the most dangerous province to drive in. 
+
+
+
+## Acknowledgements (optional) 
+
+ 
+
+If you received any help from someone other than your team members you can acknowledge them. For example:    
+
+  *The authors thank Wei for providing information on additional data resources. The authors would like to thank "TA name" for helpful suggestions and comments that improved the presentation of this poster.* 
+
+   
+
+   
+
+   
+
+   
+
