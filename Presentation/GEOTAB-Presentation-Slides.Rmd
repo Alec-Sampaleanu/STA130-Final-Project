@@ -21,7 +21,7 @@ library(DT)
 
 In 2015, Canadian roads were the site of over 116 000 collisions that lead to personal injuries. Almost 2000 people died in traffic accidents in that one year. The question that inevitably arises is: "In all of Canada, which province is the most dangerous to drive in?"
 
-The purpose of the final project of out introductory data science class was to answer three questions related to hazardous driving in Canada.
+The purpose of the final project of our introductory data science class was to answer three questions related to hazardous driving in Canada.
 
 1. Define what your group considers to be “hazardous driving” for the purposes of your project. Note that we expect that each group may have a different definition. The analysis your group does will follow from how you choose to define hazardous driving.
 
@@ -31,7 +31,7 @@ The purpose of the final project of out introductory data science class was to a
 
 ##The Data
 
-
+The primary dataset used in this analysis is GEOTAB's Hazardous Driving Areas dataset. 
 
 ---
 
@@ -53,7 +53,7 @@ head(hazardcan[1:9], 10)
 ---
 
 ```{r}
-kable(head(hazardcan[9:15], 10))
+head(hazardcan[9:15], 10)
 ```
 
 ##

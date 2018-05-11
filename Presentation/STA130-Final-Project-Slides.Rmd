@@ -5,6 +5,7 @@ subtitle: "Determining the Most Dangerous Province to Drive In"
 output:
   ioslides_presentation: 
     widescreen: true
+    df_print: kable
   beamer_presentation: default
 ---
 
